@@ -1,0 +1,20 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-reservassalas-dev-14000-authRole",
+      "UnauthRoleArn": "arn:aws:iam::214415059907:role/amplify-reservassalas-dev-14000-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::214415059907:role/amplify-reservassalas-dev-14000-authRole",
+      "Region": "us-west-2",
+      "DeploymentBucketName": "amplify-reservassalas-dev-14000-deployment",
+      "UnauthRoleName": "amplify-reservassalas-dev-14000-unauthRole",
+      "StackName": "amplify-reservassalas-dev-14000",
+      "StackId": "arn:aws:cloudformation:us-west-2:214415059907:stack/amplify-reservassalas-dev-14000/2dbd9500-6b45-11f0-899a-0a69a756ef8d",
+      "AmplifyAppId": "d3crgsydjpddk2"
+    },
+    "categories": {
+      "auth": {
+        "reservassalasfd4d92c5": {}
+      }
+    }
+  }
+}

@@ -1,0 +1,71 @@
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  width: 100%;
+  min-height: 100vh;
+}
+
+/* Cursor pointer para opciones de select */
+select option {
+  cursor: pointer !important;
+}
+
+select option:hover {
+  cursor: pointer !important;
+}
+
+/* Cursor pointer para elementos de calendario */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+}
+
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-outer-spin-button {
+  cursor: pointer !important;
+}
+
+/* Estilos adicionales para asegurar cursor pointer en dropdowns */
+select:focus option {
+  cursor: pointer !important;
+}
+
+/* Para navegadores que soportan estas pseudo-clases */
+select option:checked {
+  cursor: pointer !important;
+}
+
+/* Estilos específicos para diferentes navegadores */
+select {
+  cursor: pointer !important;
+}
+
+select * {
+  cursor: pointer !important;
+}
+
+/* Para Firefox */
+@-moz-document url-prefix() {
+  select option {
+    cursor: pointer !important;
+  }
+}
+
+/* Para WebKit (Chrome, Safari) */
+select option {
+  background: white;
+  cursor: pointer !important;
+}
+
+/* Asegurar que el calendario también funcione */
+input[type="date"] {
+  cursor: pointer !important;
+}
