@@ -149,18 +149,41 @@ export const reservationsService = {
   // Crear una nueva reserva
   createReservation: async (reservationData) => {
     try {
-      const data = await makeRequest('/reservations', {
+      console.log('🔥 API_BASE_URL:', API_BASE_URL);
+      console.log('🔥 Full URL:', `${API_BASE_URL}/reservations`);
+      console.log('🔥 Reservation data:', JSON.stringify(reservationData, null, 2));
+      
+      const response = await fetch(`${API_BASE_URL}/reservations`, {
         method: 'POST',
-        body: reservationData
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(reservationData)
       });
-      // Normalizar la respuesta
-      if (data.success) {
-        return data.result || data;
+      
+      console.log('🔥 Response status:', response.status);
+      console.log('🔥 Response headers:', response.headers);
+      
+      // Leer la respuesta como texto primero para debug
+      const responseText = await response.text();
+      console.log('🔥 Raw response:', responseText);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}, response: ${responseText}`);
       }
-      return data;
+      
+      // Intentar parsear JSON
+      const data = JSON.parse(responseText);
+      console.log('🔥 Parsed response:', data);
+      
+      if (data && data.success) {
+        return data.reservation || data.result || data;
+      }
+      
+      throw new Error('Respuesta inválida del servidor');
     } catch (error) {
-      console.error('Error creating reservation:', error);
-      throw new Error('No se pudo crear la reserva');
+      console.error('🔥 Full error:', error);
+      throw new Error(`No se pudo crear la reserva: ${error.message}`);
     }
   },
 

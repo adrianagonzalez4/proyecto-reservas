@@ -22,7 +22,8 @@ function Dashboard() {
     roomId: '',
     date: new Date().toISOString().split('T')[0],
     startTime: '',
-    endTime: ''
+    endTime: '',
+    purpose: ''
   })
 
   useEffect(() => {
@@ -95,13 +96,22 @@ function Dashboard() {
     e.preventDefault()
 
     // Validar formulario
-    if (!formData.roomId || !formData.date || !formData.startTime || !formData.endTime) {
+    if (!formData.roomId || !formData.date || !formData.startTime || !formData.endTime || !formData.purpose) {
       alert('Por favor completa todos los campos')
       return
     }
 
-    if (formData.startTime >= formData.endTime) {
+    // Convertir horas a minutos para comparar correctamente
+    const startMinutes = convertTimeToMinutes(formData.startTime)
+    const endMinutes = convertTimeToMinutes(formData.endTime)
+    
+    if (startMinutes >= endMinutes) {
       alert('La hora de fin debe ser posterior a la hora de inicio')
+      return
+    }
+    
+    if (endMinutes - startMinutes < 30) {
+      alert('La reserva debe tener una duración mínima de 30 minutos')
       return
     }
 
@@ -114,18 +124,21 @@ function Dashboard() {
         date: formData.date,
         startTime: formData.startTime,
         endTime: formData.endTime,
-        userId: 'current-user', // Esto se obtendrá del contexto de autenticación
-        status: 'active'
+        purpose: formData.purpose,
+        userName: 'yop' // Esto se obtendrá del contexto de autenticación
       }
 
-      await reservationsService.createReservation(reservationData)
+      console.log('=== DASHBOARD: Enviando datos ===', reservationData)
+      const result = await reservationsService.createReservation(reservationData)
+      console.log('=== DASHBOARD: Respuesta recibida ===', result)
 
       // Limpiar formulario
       setFormData({
         roomId: '',
         date: new Date().toISOString().split('T')[0],
         startTime: '',
-        endTime: ''
+        endTime: '',
+        purpose: ''
       })
 
       // Recargar datos
@@ -134,6 +147,7 @@ function Dashboard() {
       alert('Reserva creada exitosamente')
 
     } catch (err) {
+      console.error('=== DASHBOARD: Error completo ===', err)
       alert(`Error al crear la reserva: ${err.message}`)
     } finally {
       setLoading(false)
@@ -146,6 +160,11 @@ function Dashboard() {
       ...prev,
       [name]: value
     }))
+  }
+
+  const convertTimeToMinutes = (time) => {
+    const [hours, minutes] = time.split(':').map(Number)
+    return hours * 60 + minutes
   }
 
   const handleLogout = async () => {
@@ -355,6 +374,22 @@ function Dashboard() {
                   <option value="18:00">18:00</option>
                 </select>
               </div>
+            </div>
+
+            {/* Campo Propósito */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Propósito de la reunión
+              </label>
+              <input
+                type="text"
+                name="purpose"
+                value={formData.purpose}
+                onChange={handleInputChange}
+                placeholder="Ej: Reunión de equipo, Presentación, etc."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                disabled={loading}
+              />
             </div>
 
             <button
