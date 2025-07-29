@@ -1,17 +1,38 @@
-import { Outlet, Link, useLocation } from 'react-router-dom'
-import { signOut } from 'aws-amplify/auth'
+import { useEffect, useState } from 'react';
+import { Outlet, Link, useLocation } from 'react-router-dom';
+import { signOut, fetchAuthSession } from 'aws-amplify/auth';
 
 function Layout() {
-  const location = useLocation()
+  const location = useLocation();
+  const [userInfo, setUserInfo] = useState({ name: '', email: '', initial: '?' });
+
+  useEffect(() => {
+    const loadUserInfo = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const claims = session.tokens?.idToken?.payload;
+
+        const name = claims?.name || claims?.email?.split('@')[0] || 'Usuario';
+        const email = claims?.email || '';
+        const initial = name.charAt(0).toUpperCase();
+
+        setUserInfo({ name, email, initial });
+      } catch (error) {
+        console.warn('No se pudo obtener la sesión de usuario:', error);
+      }
+    };
+
+    loadUserInfo();
+  }, []);
 
   const handleLogout = async () => {
     try {
-      await signOut()
-      window.location.href = '/login'
+      await signOut();
+      window.location.href = '/login';
     } catch (error) {
-      console.error('Error al cerrar sesión:', error)
+      console.error('Error al cerrar sesión:', error);
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gray-100 flex">
@@ -50,11 +71,11 @@ function Layout() {
         <div className="absolute bottom-0 w-64 p-4 border-t">
           <div className="flex items-center">
             <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white font-bold">
-              Y
+              {userInfo.initial}
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900">yop</p>
-              <p className="text-xs text-gray-500">adrianagesp@outlook.com</p>
+              <p className="text-sm font-medium text-gray-900">Adriana González</p>
+              <p className="text-xs text-gray-500">snoopydigitaldiary@gmail.com</p>
             </div>
           </div>
           <button
@@ -72,8 +93,7 @@ function Layout() {
         <Outlet />
       </div>
     </div>
-  )
+  );
 }
 
-export default Layout
-
+export default Layout;

@@ -151,18 +151,15 @@ const handleCancelReservation = async () => {
   try {
     setLoading(true);
 
-    // 🚀 CANCELAR LA RESERVA (ya no se pasa userId)
+    // 🚀 CANCELAR LA RESERVA
     const result = await reservationsService.cancelReservation(selectedReservation.id);
     console.log('✅ Resultado de cancelación:', result);
 
-    // 🔄 ACTUALIZAR ESTADO LOCAL - REMOVER LA RESERVA CANCELADA
-    const updatedReservations = reservations.filter(reservation =>
-      reservation.id !== selectedReservation.id
-    );
-
-    setReservations(updatedReservations);
     alert('✅ Reserva cancelada exitosamente');
     setShowCancelModal(false);
+
+    // 🔄 RECARGAR DATOS DESDE EL BACKEND
+    await loadData();
 
   } catch (err) {
     console.error('❌ ERROR COMPLETO:', err);
@@ -171,6 +168,7 @@ const handleCancelReservation = async () => {
     setLoading(false);
   }
 };
+
 
 
   const formatDate = (dateString) => {
@@ -241,8 +239,8 @@ const handleCancelReservation = async () => {
               Y
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900">yop</p>
-              <p className="text-xs text-gray-500">adrianagesp@outlook.com</p>
+              <p className="text-sm font-medium text-gray-900">Adriana González</p>
+              <p className="text-xs text-gray-500">snoopydigitaldiary@gmail.com</p>
             </div>
           </div>
           <button 

@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
 const Login = () => {
   const navigate = useNavigate()
+  const location = useLocation()
   const { login, register } = useAuth()
   
   const [isLogin, setIsLogin] = useState(true)
@@ -16,6 +17,15 @@ const Login = () => {
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [success, setSuccess] = useState('')
+
+  // Mostrar mensaje si viene del reset password
+  useEffect(() => {
+    if (location.state?.message) {
+      setSuccess(location.state.message)
+      // Limpiar el estado para que no se muestre en futuras visitas
+      navigate(location.pathname, { replace: true })
+    }
+  }, [location, navigate])
 
   const handleChange = (e) => {
     setFormData({
@@ -31,31 +41,60 @@ const Login = () => {
     setError('')
     setSuccess('')
 
+    // Validación básica
+    if (!formData.email || !formData.password) {
+      setError('Email y contraseña son obligatorios')
+      setLoading(false)
+      return
+    }
+
+    if (!isLogin && !formData.name) {
+      setError('El nombre es obligatorio para el registro')
+      setLoading(false)
+      return
+    }
+
+    // Validación de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(formData.email)) {
+      setError('Por favor ingresa un email válido')
+      setLoading(false)
+      return
+    }
+
+
     try {
       if (isLogin) {
         // LOGIN REAL
         console.log('🔐 Intentando login con:', formData.email)
         const result = await login(formData.email, formData.password)
         
-        if (result.success) {
+        if (result && result.success) {
           console.log('✅ Login exitoso!')
           setSuccess('¡Login exitoso! Redirigiendo...')
           setTimeout(() => {
             navigate('/') // Redirigir al dashboard
           }, 1000)
         } else {
-          setError(result.message || 'Error en el login')
+          setError(result?.message || 'Error en el login')
         }
       } else {
         // REGISTRO REAL
         console.log('📝 Intentando registro con:', formData.email)
         const result = await register(formData.email, formData.password, formData.name)
         
-        if (result.success) {
-          setSuccess('¡Registro exitoso! Revisa tu email para confirmar tu cuenta.')
-          setFormData({ email: '', password: '', name: '' })
+        if (result && result.success) {
+          // Registro exitoso sin confirmación
+          setSuccess(result.message || '¡Registro exitoso!')
+          
+          // Cambiar a modo login después del registro
+          setTimeout(() => {
+            setIsLogin(true)
+            setFormData({ email: formData.email, password: '', name: '' })
+            setSuccess('¡Registro exitoso! Ahora puedes iniciar sesión.')
+          }, 2000)
         } else {
-          setError(result.message || 'Error en el registro')
+          setError(result?.message || 'Error en el registro')
         }
       }
     } catch (error) {

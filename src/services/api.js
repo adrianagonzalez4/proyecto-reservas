@@ -194,6 +194,17 @@ export const reservationsService = {
         reservations = [];
       }
       
+      // Normalizar cada reserva para asegurar campos requeridos
+      reservations = reservations.map(reservation => ({
+        id: reservation.id || reservation.reservationId || '',
+        roomId: reservation.roomId || '',
+        date: reservation.date || '',
+        startTime: reservation.startTime || '',
+        endTime: reservation.endTime || '',
+        userName: reservation.userName || '',
+        status: reservation.status || 'scheduled'
+      }));
+      
       console.log('✅ Reservas procesadas:', reservations.length);
       console.log('📝 Detalle reservas:', reservations);
       
@@ -207,35 +218,25 @@ export const reservationsService = {
   // Crear una nueva reserva
   createReservation: async (reservationData) => {
     try {
-      // Formato exacto que funciona (igual al test HTML)
+      // Ajustar payload para que coincida con el esquema esperado por la API
       const payload = {
         roomId: reservationData.roomId,
         date: reservationData.date,
         startTime: reservationData.startTime,
         endTime: reservationData.endTime,
-        userName: reservationData.userName
+        userName: reservationData.userName,
+        status: 'scheduled' // Añadir estado por defecto
       };
-      
+
       console.log('✅ Enviando:', payload);
-      
-      const response = await fetch(`${API_BASE_URL}/reservations`, {
+
+      const result = await makeRequest('/reservations', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+        body: payload
       });
-      
-      console.log('✅ Status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error ${response.status}: ${errorText}`);
-      }
-      
-      const result = await response.json();
+
       console.log('✅ Respuesta:', result);
-      
+
       return result;
     } catch (error) {
       console.error('❌ Error:', error);
@@ -247,8 +248,8 @@ cancelReservation: async (reservationId) => {
   try {
     console.log('🗑️ Cancelando reserva:', reservationId);
 
-    const result = await makeRequest(`/reservations/${reservationId}`, {
-      method: 'DELETE'
+    const result = await makeRequest(`/reservations/${reservationId}/cancel`, {
+      method: 'PUT'
     });
 
     console.log('✅ Reserva cancelada exitosamente:', result);
@@ -265,25 +266,14 @@ cancelReservation: async (reservationId) => {
   updateReservation: async (reservationId, updateData) => {
     try {
       console.log('✏️ Actualizando reserva:', reservationId, updateData);
-      
-      const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}`, {
+
+      const result = await makeRequest(`/reservations/${reservationId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updateData)
+        body: updateData
       });
-      
-      console.log('🔍 Update response status:', response.status);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Error ${response.status}: ${errorText}`);
-      }
-      
-      const result = await response.json();
+
       console.log('✅ Reserva actualizada:', result);
-      
+
       return result;
     } catch (error) {
       console.error('❌ Error actualizando reserva:', error);

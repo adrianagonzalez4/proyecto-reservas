@@ -178,80 +178,75 @@ function Dashboard() {
     return hours * 60 + minutes
   }
 
-  const handleCreateReservation = async (e) => {
-    e.preventDefault()
+const handleCreateReservation = async (e) => {
+  e.preventDefault();
 
-    // Validar formulario
-    if (!formData.roomId || !formData.date || !formData.startTime || !formData.endTime) {
-      alert('Por favor completa todos los campos')
-      return
-    }
-
-    // Convertir horas a minutos para comparar correctamente
-    const startMinutes = convertTimeToMinutes(formData.startTime)
-    const endMinutes = convertTimeToMinutes(formData.endTime)
-    
-    if (startMinutes >= endMinutes) {
-      alert('La hora de fin debe ser posterior a la hora de inicio')
-      return
-    }
-    
-    if (endMinutes - startMinutes < 30) {
-      alert('La reserva debe tener una duración mínima de 30 minutos')
-      return
-    }
-
-    try {
-      setLoading(true)
-
-      // 🚨 VALIDACIÓN DE CONFLICTOS
-      const hasConflict = checkTimeConflict(
-        formData.roomId,
-        formData.date,
-        formData.startTime,
-        formData.endTime,
-        reservations
-      )
-
-      if (hasConflict) {
-        alert('⚠️ CONFLICTO: Ya existe una reserva en esa sala para ese horario')
-        setLoading(false)
-        return
-      }
-
-      // Crear la reserva
-      const reservationData = {
-        roomId: formData.roomId,
-        date: formData.date,
-        startTime: formData.startTime,
-        endTime: formData.endTime,
-        userName: 'yop' // Esto se obtendrá del contexto de autenticación
-      }
-
-      console.log('=== DASHBOARD: Enviando datos ===', reservationData)
-      const result = await reservationsService.createReservation(reservationData)
-      console.log('=== DASHBOARD: Respuesta recibida ===', result)
-
-      // Limpiar formulario
-      setFormData({
-        roomId: '',
-        date: new Date().toISOString().split('T')[0],
-        startTime: '',
-        endTime: ''
-      })
-
-      // Recargar datos
-      await loadData()
-
-      alert('Reserva creada exitosamente')
-
-    } catch (err) {
-      console.error('=== DASHBOARD: Error completo ===', err)
-      alert(`Error al crear la reserva: ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
+  // Validar formulario
+  if (!formData.roomId || !formData.date || !formData.startTime || !formData.endTime) {
+    alert('Por favor completa todos los campos');
+    return;
   }
+
+  const startMinutes = convertTimeToMinutes(formData.startTime);
+  const endMinutes = convertTimeToMinutes(formData.endTime);
+  if (startMinutes >= endMinutes) {
+    alert('La hora de fin debe ser posterior a la hora de inicio');
+    return;
+  }
+
+  if (endMinutes - startMinutes < 30) {
+    alert('La reserva debe tener una duración mínima de 30 minutos');
+    return;
+  }
+
+  try {
+    setLoading(true);
+
+    // Verificar conflicto
+    const hasConflict = checkTimeConflict(
+      formData.roomId,
+      formData.date,
+      formData.startTime,
+      formData.endTime,
+      reservations
+    );
+
+    if (hasConflict) {
+      alert('⚠️ CONFLICTO: Ya existe una reserva en esa sala para ese horario');
+      return;
+    }
+
+    // Crear reserva sin autenticación
+    const reservationData = {
+      roomId: formData.roomId,
+      date: formData.date,
+      startTime: formData.startTime,
+      endTime: formData.endTime,
+      userName: 'invitado',
+      status: 'scheduled'
+    };
+
+    console.log('Enviando reserva no autenticada:', reservationData);
+    const result = await reservationsService.createReservation(reservationData);
+    console.log('Reserva creada:', result);
+
+    setFormData({
+      roomId: '',
+      date: new Date().toISOString().split('T')[0],
+      startTime: '',
+      endTime: ''
+    });
+
+    await loadData();
+    alert('Reserva creada exitosamente');
+
+  } catch (err) {
+    console.error('Error al crear la reserva:', err);
+    alert(`Error al crear la reserva: ${err.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
@@ -309,8 +304,8 @@ function Dashboard() {
               Y
             </div>
             <div className="ml-3">
-              <p className="text-sm font-medium text-gray-900">yop</p>
-              <p className="text-xs text-gray-500">adrianagesp@outlook.com</p>
+              <p className="text-sm font-medium text-gray-900">Adriana González</p>
+              <p className="text-xs text-gray-500">snoopydigitaldiary@gmail.com</p>
             </div>
           </div>
           <button 

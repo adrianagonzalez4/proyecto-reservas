@@ -1,26 +1,21 @@
-import { useState, useEffect } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 const ResetPassword = () => {
+  const navigate = useNavigate()
+  const { resetPasswordWithCode } = useAuth()
+  
   const [formData, setFormData] = useState({
+    email: '',
+    code: '',
     newPassword: '',
     confirmPassword: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
-  const navigate = useNavigate()
-  const location = useLocation()
-  const resetToken = location.state?.resetToken
-  const email = location.state?.email
-
-  useEffect(() => {
-    if (!resetToken || !email) {
-      navigate('/forgot-password')
-    }
-  }, [resetToken, email, navigate])
 
   const handleChange = (e) => {
     setFormData({
@@ -35,14 +30,9 @@ const ResetPassword = () => {
     setLoading(true)
     setError('')
 
-    if (!formData.newPassword || !formData.confirmPassword) {
-      setError('Ambos campos de contraseña son requeridos')
-      setLoading(false)
-      return
-    }
-
-    if (formData.newPassword.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres')
+    // Validaciones
+    if (!formData.email || !formData.code || !formData.newPassword || !formData.confirmPassword) {
+      setError('Todos los campos son obligatorios')
       setLoading(false)
       return
     }
@@ -53,76 +43,35 @@ const ResetPassword = () => {
       return
     }
 
+    if (formData.newPassword.length < 8) {
+      setError('La contraseña debe tener al menos 8 caracteres')
+      setLoading(false)
+      return
+    }
+
     try {
-      const response = await fetch('http://localhost:3005/api/auth/reset-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          resetToken, 
-          newPassword: formData.newPassword 
+      const result = await resetPasswordWithCode(
+        formData.email, 
+        formData.code, 
+        formData.newPassword
+      )
+      
+      if (result.success) {
+        // Redirigir al login con mensaje de éxito
+        navigate('/login', { 
+          state: { 
+            message: 'Contraseña restablecida exitosamente. Puedes iniciar sesión.' 
+          } 
         })
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess(true)
-        // Redirigir al login después de 3 segundos
-        setTimeout(() => {
-          navigate('/login')
-        }, 3000)
       } else {
-        setError(data.message)
+        setError(result.message)
       }
     } catch (error) {
-      setError('Error de conexión')
+      console.error('Error:', error)
+      setError('Error inesperado. Por favor, intenta nuevamente.')
     } finally {
       setLoading(false)
     }
-  }
-
-  if (!resetToken || !email) {
-    return null
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex">
-        <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-20 xl:px-24">
-          <div className="mx-auto w-full max-w-sm lg:w-96">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
-                <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <h2 className="text-2xl font-semibold text-gray-900 mb-2">
-                Contraseña Restablecida
-              </h2>
-              <p className="text-gray-600 mb-4">
-                Tu contraseña ha sido restablecida exitosamente.
-              </p>
-              <p className="text-sm text-gray-500">
-                Redirigiendo al inicio de sesión...
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Right side - Orange circle design */}
-        <div className="hidden lg:block relative w-0 flex-1 bg-gradient-to-br from-orange-100 to-orange-50">
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="relative">
-              <div className="w-80 h-80 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full shadow-2xl"></div>
-              <div className="absolute -top-8 -right-8 w-32 h-32 bg-gradient-to-br from-orange-300 to-orange-400 rounded-full opacity-70"></div>
-              <div className="absolute -bottom-12 -left-12 w-24 h-24 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full opacity-50"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -132,14 +81,51 @@ const ResetPassword = () => {
         <div className="mx-auto w-full max-w-sm lg:w-96">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Nueva Contraseña
+              Reserva de Salón
             </h1>
-            <p className="text-gray-600">
-              Ingresa tu nueva contraseña para <span className="font-medium">{email}</span>
+            <h2 className="text-2xl font-semibold text-gray-800">
+              Restablecer Contraseña
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Ingresa el código que recibiste por email y tu nueva contraseña.
             </p>
           </div>
-          
+
           <form className="space-y-6" onSubmit={handleSubmit}>
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1 text-left">
+                Correo Electrónico
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 placeholder-gray-500"
+                placeholder="Ingresa tu correo electrónico"
+                value={formData.email}
+                onChange={handleChange}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1 text-left">
+                Código de Verificación
+              </label>
+              <input
+                id="code"
+                name="code"
+                type="text"
+                required
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 placeholder-gray-500"
+                placeholder="Ingresa el código de 6 dígitos"
+                value={formData.code}
+                onChange={handleChange}
+                maxLength={6}
+              />
+            </div>
+
             <div>
               <label htmlFor="newPassword" className="block text-sm font-medium text-gray-700 mb-1 text-left">
                 Nueva Contraseña
@@ -148,7 +134,7 @@ const ResetPassword = () => {
                 <input
                   id="newPassword"
                   name="newPassword"
-                  type={showNewPassword ? "text" : "password"}
+                  type={showPassword ? "text" : "password"}
                   required
                   className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-gray-900 placeholder-gray-500"
                   placeholder="••••••••"
@@ -158,9 +144,9 @@ const ResetPassword = () => {
                 <button
                   type="button"
                   className="absolute inset-y-0 right-0 pr-3 flex items-center cursor-pointer"
-                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  onClick={() => setShowPassword(!showPassword)}
                 >
-                  {showNewPassword ? (
+                  {showPassword ? (
                     <svg className="h-5 w-5 text-gray-400 hover:text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21" />
                     </svg>
@@ -176,7 +162,7 @@ const ResetPassword = () => {
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1 text-left">
-                Confirmar Contraseña
+                Confirmar Nueva Contraseña
               </label>
               <div className="relative">
                 <input
@@ -217,7 +203,7 @@ const ResetPassword = () => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="w-full bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
             >
               {loading ? (
                 <div className="flex items-center justify-center">
@@ -228,12 +214,18 @@ const ResetPassword = () => {
               )}
             </button>
 
-            <div className="text-center">
+            <div className="text-center space-y-2">
+              <Link
+                to="/forgot-password"
+                className="text-orange-500 hover:text-orange-600 text-sm font-medium cursor-pointer block"
+              >
+                ¿No recibiste el código? Enviar nuevo código
+              </Link>
               <Link
                 to="/login"
-                className="text-orange-500 hover:text-orange-600 text-sm font-medium"
+                className="text-gray-600 hover:text-gray-800 text-sm cursor-pointer block"
               >
-                Volver al inicio de sesión
+                ← Volver al login
               </Link>
             </div>
           </form>
@@ -244,8 +236,11 @@ const ResetPassword = () => {
       <div className="hidden lg:block relative w-0 flex-1 bg-gradient-to-br from-orange-100 to-orange-50">
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative">
+            {/* Main orange circle */}
             <div className="w-80 h-80 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full shadow-2xl"></div>
+            {/* Smaller accent circle */}
             <div className="absolute -top-8 -right-8 w-32 h-32 bg-gradient-to-br from-orange-300 to-orange-400 rounded-full opacity-70"></div>
+            {/* Bottom accent circle */}
             <div className="absolute -bottom-12 -left-12 w-24 h-24 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full opacity-50"></div>
           </div>
         </div>

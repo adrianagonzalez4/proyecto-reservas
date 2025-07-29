@@ -1,8 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
-import { Amplify } from 'aws-amplify'
-import amplifyconfig from './amplifyconfiguration.json'
 import './index.css'
 import './App.css'
+
+// No configures ni importes Amplify aquí
+// ❌ import { Amplify } from 'aws-amplify'
+// ❌ import amplifyconfig from './amplifyconfiguration.json'
+// ❌ import awsconfig from './aws-exports'
+// ❌ Amplify.configure(awsconfig)
+// ❌ Amplify.configure(amplifyconfig)
 
 // Importar componentes
 import { AuthProvider } from './contexts/AuthContext'
@@ -11,14 +16,9 @@ import ProtectedRoute from './components/ProtectedRoute'
 // Importar páginas
 import Login from './pages/Login'
 import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/Dashboard'
 import MyReservations from './pages/MyReservations'
-
-Amplify.configure(amplifyconfig)
-
-// App principal con sistema de autenticación
-
-
 
 function App() {
   return (
@@ -28,6 +28,7 @@ function App() {
           {/* Rutas públicas */}
           <Route path="/login" element={<Login />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           
           {/* Rutas protegidas */}
           <Route path="/dashboard" element={
@@ -50,4 +51,3 @@ function App() {
 }
 
 export default App
-
