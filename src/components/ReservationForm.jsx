@@ -14,14 +14,22 @@ const ReservationForm = ({ onReservationCreated }) => {
   const [success, setSuccess] = useState('')
 
   const { makeRequest } = useApi()
-  const { data: roomsData, loading: roomsLoading } = useFetch('/rooms')
+  
+  // Salas hardcodeadas (temporal hasta crear endpoint /rooms)
+  const rooms = [
+    { id: 'sala-a', name: 'Sala A', capacity: 10 },
+    { id: 'sala-b', name: 'Sala B', capacity: 15 },
+    { id: 'sala-c', name: 'Sala C', capacity: 20 },
+    { id: 'sala-d', name: 'Sala D', capacity: 25 },
+    { id: 'sala-e', name: 'Sala E', capacity: 30 }
+  ]
+  
+  const roomsLoading = false
 
   const timeSlots = [
     '08:00', '09:00', '10:00', '11:00', '12:00', '13:00',
     '14:00', '15:00', '16:00', '17:00', '18:00'
   ]
-
-  const rooms = roomsData?.rooms || []
 
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0]

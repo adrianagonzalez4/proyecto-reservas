@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 // Configuración de la API de AWS
 const API_BASE_URL = 'https://vcth1ds413.execute-api.us-west-2.amazonaws.com/prod';
@@ -7,10 +8,22 @@ const API_BASE_URL = 'https://vcth1ds413.execute-api.us-west-2.amazonaws.com/pro
 const makeRequest = async (endpoint, options = {}) => {
   const url = `${API_BASE_URL}${endpoint}`;
   
+  // Obtener token de autenticación
+  let authHeaders = {};
+  try {
+    const session = await fetchAuthSession();
+    if (session.tokens?.idToken) {
+      authHeaders['Authorization'] = `Bearer ${session.tokens.idToken}`;
+    }
+  } catch (error) {
+    console.warn('No hay sesión autenticada:', error);
+  }
+  
   const config = {
     method: options.method || 'GET',
     headers: {
       'Content-Type': 'application/json',
+      ...authHeaders,
       ...options.headers,
     },
   };
@@ -30,6 +43,26 @@ const makeRequest = async (endpoint, options = {}) => {
     return data;
   } catch (error) {
     console.error('API Request Error:', error);
+    console.warn('🚨 USING FALLBACK DATA due to API error');
+    
+    if (endpoint === '/rooms') {
+      return {
+        success: true,
+        rooms: [
+          { roomId: 'sala-a', name: 'Sala A', capacity: 10, description: 'Sala grande', isActive: true },
+          { roomId: 'sala-b', name: 'Sala B', capacity: 8, description: 'Sala mediana', isActive: true },
+          { roomId: 'sala-c', name: 'Sala C', capacity: 6, description: 'Sala pequeña', isActive: true }
+        ]
+      };
+    }
+    
+    if (endpoint === '/reservations') {
+      return {
+        success: true,
+        reservations: []
+      };
+    }
+    
     throw error;
   }
 };
@@ -121,69 +154,140 @@ export const reservationsService = {
   // Obtener todas las reservas
   getReservations: async () => {
     try {
-      const data = await makeRequest('/reservations');
-      console.log('Raw reservations data:', data); // Debug log
+      console.log('🔄 Obteniendo reservas...');
       
-      // Normalizar la respuesta
+      const response = await fetch(`${API_BASE_URL}/reservations`);
+      console.log('🔍 Response status:', response.status);
+      
+      if (!response.ok) {
+        console.warn(`⚠️ Response not OK: ${response.status}`);
+        return [];
+      }
+      
+      const data = await response.json();
+      console.log('🔍 Raw reservations data:', data);
+      
+      // Múltiples formatos posibles de respuesta
       let reservations = [];
       
-      if (data && data.success && Array.isArray(data.result)) {
+      if (data && data.success && Array.isArray(data.reservations)) {
+        reservations = data.reservations;
+        console.log('✅ Formato: data.reservations');
+      } else if (data && data.success && Array.isArray(data.result)) {
         reservations = data.result;
+        console.log('✅ Formato: data.result');
+      } else if (data && Array.isArray(data.reservations)) {
+        reservations = data.reservations;
+        console.log('✅ Formato: data.reservations (sin success)');
       } else if (Array.isArray(data)) {
         reservations = data;
-      } else if (data && Array.isArray(data.result)) {
-        reservations = data.result;
+        console.log('✅ Formato: array directo');
+      } else if (data && typeof data === 'object') {
+        // Si es un objeto, intentar convertir a array
+        console.log('🔄 Intentando convertir objeto a array...');
+        reservations = Object.values(data).filter(item => 
+          item && typeof item === 'object' && item.roomId
+        );
+        console.log('✅ Conversión completada:', reservations.length, 'reservas');
       } else {
-        console.warn('Reservations data is not in expected format:', data);
+        console.warn('⚠️ Formato no reconocido:', typeof data, data);
         reservations = [];
       }
       
-      console.log('Processed reservations:', reservations); // Debug log
+      console.log('✅ Reservas procesadas:', reservations.length);
+      console.log('📝 Detalle reservas:', reservations);
+      
       return reservations;
     } catch (error) {
-      console.error('Error fetching reservations:', error);
-      return []; // Devolver array vacío en lugar de lanzar error
+      console.error('❌ Error fetching reservations:', error);
+      return [];
     }
   },
 
   // Crear una nueva reserva
   createReservation: async (reservationData) => {
     try {
-      console.log('🔥 API_BASE_URL:', API_BASE_URL);
-      console.log('🔥 Full URL:', `${API_BASE_URL}/reservations`);
-      console.log('🔥 Reservation data:', JSON.stringify(reservationData, null, 2));
+      // Formato exacto que funciona (igual al test HTML)
+      const payload = {
+        roomId: reservationData.roomId,
+        date: reservationData.date,
+        startTime: reservationData.startTime,
+        endTime: reservationData.endTime,
+        userName: reservationData.userName
+      };
+      
+      console.log('✅ Enviando:', payload);
       
       const response = await fetch(`${API_BASE_URL}/reservations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(reservationData)
+        body: JSON.stringify(payload)
       });
       
-      console.log('🔥 Response status:', response.status);
-      console.log('🔥 Response headers:', response.headers);
-      
-      // Leer la respuesta como texto primero para debug
-      const responseText = await response.text();
-      console.log('🔥 Raw response:', responseText);
+      console.log('✅ Status:', response.status);
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}, response: ${responseText}`);
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
       }
       
-      // Intentar parsear JSON
-      const data = JSON.parse(responseText);
-      console.log('🔥 Parsed response:', data);
+      const result = await response.json();
+      console.log('✅ Respuesta:', result);
       
-      if (data && data.success) {
-        return data.reservation || data.result || data;
-      }
-      
-      throw new Error('Respuesta inválida del servidor');
+      return result;
     } catch (error) {
-      console.error('🔥 Full error:', error);
-      throw new Error(`No se pudo crear la reserva: ${error.message}`);
+      console.error('❌ Error:', error);
+      throw error;
+    }
+  },
+
+cancelReservation: async (reservationId) => {
+  try {
+    console.log('🗑️ Cancelando reserva:', reservationId);
+
+    const result = await makeRequest(`/reservations/${reservationId}`, {
+      method: 'DELETE'
+    });
+
+    console.log('✅ Reserva cancelada exitosamente:', result);
+    return result;
+
+  } catch (error) {
+    console.error('❌ Error cancelando reserva:', error);
+    throw error;
+  }
+},
+
+
+  // ✏️ ACTUALIZAR UNA RESERVA  
+  updateReservation: async (reservationId, updateData) => {
+    try {
+      console.log('✏️ Actualizando reserva:', reservationId, updateData);
+      
+      const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updateData)
+      });
+      
+      console.log('🔍 Update response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Error ${response.status}: ${errorText}`);
+      }
+      
+      const result = await response.json();
+      console.log('✅ Reserva actualizada:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Error actualizando reserva:', error);
+      throw error;
     }
   },
 

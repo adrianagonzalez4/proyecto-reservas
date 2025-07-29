@@ -21,7 +21,7 @@ const EditReservationModal = ({ isOpen, onClose, reservation, onUpdate }) => {
   useEffect(() => {
     const fetchRooms = async () => {
       try {
-        const res = await fetch(`${import.meta.env.VITE_API_URL}/rooms`)
+        const res = await fetch(`https://vcth1ds413.execute-api.us-west-2.amazonaws.com/prod/rooms`)
         const data = await res.json()
         setRooms(data.rooms || [])
       } catch (err) {
@@ -90,7 +90,7 @@ const EditReservationModal = ({ isOpen, onClose, reservation, onUpdate }) => {
     }
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/reservations/${reservation.id}`, {
+      const response = await fetch(`https://vcth1ds413.execute-api.us-west-2.amazonaws.com/prod/reservations/${reservation.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)

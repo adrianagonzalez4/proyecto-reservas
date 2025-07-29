@@ -1,7 +1,11 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 const Login = () => {
+  const navigate = useNavigate()
+  const { login, register } = useAuth()
+  
   const [isLogin, setIsLogin] = useState(true)
   const [formData, setFormData] = useState({
     email: '',
@@ -11,6 +15,7 @@ const Login = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [success, setSuccess] = useState('')
 
   const handleChange = (e) => {
     setFormData({
@@ -24,12 +29,41 @@ const Login = () => {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setSuccess('')
 
-    // Simulación para mostrar el diseño
-    setTimeout(() => {
+    try {
+      if (isLogin) {
+        // LOGIN REAL
+        console.log('🔐 Intentando login con:', formData.email)
+        const result = await login(formData.email, formData.password)
+        
+        if (result.success) {
+          console.log('✅ Login exitoso!')
+          setSuccess('¡Login exitoso! Redirigiendo...')
+          setTimeout(() => {
+            navigate('/') // Redirigir al dashboard
+          }, 1000)
+        } else {
+          setError(result.message || 'Error en el login')
+        }
+      } else {
+        // REGISTRO REAL
+        console.log('📝 Intentando registro con:', formData.email)
+        const result = await register(formData.email, formData.password, formData.name)
+        
+        if (result.success) {
+          setSuccess('¡Registro exitoso! Revisa tu email para confirmar tu cuenta.')
+          setFormData({ email: '', password: '', name: '' })
+        } else {
+          setError(result.message || 'Error en el registro')
+        }
+      }
+    } catch (error) {
+      console.error('Error en autenticación:', error)
+      setError(error.message || 'Error inesperado')
+    } finally {
       setLoading(false)
-      alert(isLogin ? 'Login simulado' : 'Registro simulado')
-    }, 1000)
+    }
   }
 
   return (
@@ -131,6 +165,12 @@ const Login = () => {
             {error && (
               <div className="text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg p-3">
                 {error}
+              </div>
+            )}
+
+            {success && (
+              <div className="text-green-600 text-sm bg-green-50 border border-green-200 rounded-lg p-3">
+                {success}
               </div>
             )}
 

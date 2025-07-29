@@ -9,7 +9,7 @@ const MetricsCards = ({ refreshKey }) => {
     const fetchMetrics = async () => {
       setLoading(true)
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/metrics`)
+        const response = await fetch(`https://vcth1ds413.execute-api.us-west-2.amazonaws.com/prod/metrics`)
         if (!response.ok) throw new Error('Error al cargar métricas')
 
         const data = await response.json()

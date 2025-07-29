@@ -116,6 +116,7 @@ function MyReservations() {
   }
 
   const handleCancelClick = (reservation) => {
+    console.log('🔄 CLICK EN CANCELAR:', reservation);
     setSelectedReservation(reservation)
     setShowCancelModal(true)
   }
@@ -126,40 +127,58 @@ function MyReservations() {
     try {
       setLoading(true)
       
-      // Aquí iría la lógica para actualizar la reserva
-      // await reservationsService.updateReservation(selectedReservation.id, editFormData)
+      console.log('✏️ Actualizando reserva:', selectedReservation.id, editFormData);
       
-      alert('Reserva actualizada exitosamente')
+      // 🚀 ACTUALIZAR LA RESERVA REAL
+      await reservationsService.updateReservation(selectedReservation.id, editFormData)
+      
+      alert('✅ Reserva actualizada exitosamente')
       setShowEditModal(false)
-      await loadData()
+      await loadData() // Recargar datos
       
     } catch (err) {
-      alert(`Error al actualizar la reserva: ${err.message}`)
+      console.error('❌ Error al actualizar:', err);
+      alert(`❌ Error al actualizar la reserva: ${err.message}`)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleCancelReservation = async () => {
-    try {
-      setLoading(true)
-      
-      // Aquí iría la lógica para cancelar la reserva
-      // await reservationsService.cancelReservation(selectedReservation.id)
-      
-      alert('Reserva cancelada exitosamente')
-      setShowCancelModal(false)
-      await loadData()
-      
-    } catch (err) {
-      alert(`Error al cancelar la reserva: ${err.message}`)
-    } finally {
-      setLoading(false)
-    }
+const handleCancelReservation = async () => {
+  console.log('🚨 INICIANDO CANCELACIÓN - Función llamada');
+  console.log('📄 Reserva seleccionada:', selectedReservation);
+
+  try {
+    setLoading(true);
+
+    // 🚀 CANCELAR LA RESERVA (ya no se pasa userId)
+    const result = await reservationsService.cancelReservation(selectedReservation.id);
+    console.log('✅ Resultado de cancelación:', result);
+
+    // 🔄 ACTUALIZAR ESTADO LOCAL - REMOVER LA RESERVA CANCELADA
+    const updatedReservations = reservations.filter(reservation =>
+      reservation.id !== selectedReservation.id
+    );
+
+    setReservations(updatedReservations);
+    alert('✅ Reserva cancelada exitosamente');
+    setShowCancelModal(false);
+
+  } catch (err) {
+    console.error('❌ ERROR COMPLETO:', err);
+    alert(`❌ Error al cancelar la reserva: ${err.message}`);
+  } finally {
+    setLoading(false);
   }
+};
+
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString)
+    // 🔧 FIX: Evitar problema de zona horaria
+    // En lugar de new Date(dateString), usar split manual
+    const [year, month, day] = dateString.split('-').map(Number)
+    const date = new Date(year, month - 1, day) // month - 1 porque JavaScript cuenta desde 0
+    
     const options = {
       weekday: 'long',
       year: 'numeric',
@@ -339,23 +358,35 @@ function MyReservations() {
                         {reservation.startTime} - {reservation.endTime}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          🟢 Programada
-                        </span>
+                        {reservation.status === 'cancelled' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            🔴 Cancelada
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                            🟢 Programada
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
-                        <button
-                          onClick={() => handleEditClick(reservation)}
-                          className="text-blue-600 hover:text-blue-900 font-medium"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => handleCancelClick(reservation)}
-                          className="text-red-600 hover:text-red-900 font-medium"
-                        >
-                          Cancelar
-                        </button>
+                        {reservation.status === 'cancelled' ? (
+                          <span className="text-gray-400 text-sm">Reserva cancelada</span>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleEditClick(reservation)}
+                              className="text-blue-600 hover:text-blue-900 font-medium"
+                            >
+                              Editar
+                            </button>
+                            <button
+                              onClick={() => handleCancelClick(reservation)}
+                              className="text-red-600 hover:text-red-900 font-medium"
+                            >
+                              Cancelar
+                            </button>
+                          </>
+                        )}
                       </td>
                     </tr>
                   ))}

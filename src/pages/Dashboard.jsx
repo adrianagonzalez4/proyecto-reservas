@@ -22,8 +22,7 @@ function Dashboard() {
     roomId: '',
     date: new Date().toISOString().split('T')[0],
     startTime: '',
-    endTime: '',
-    purpose: ''
+    endTime: ''
   })
 
   useEffect(() => {
@@ -46,11 +45,37 @@ function Dashboard() {
       setLoading(true)
       setError('')
 
+      console.log('🔄 CARGANDO DATOS...')
+      console.log('🔗 API_BASE_URL:', 'https://vctlnlds413.execute-api.us-west-2.amazonaws.com/dev')
+      console.log('🔍 roomsService:', roomsService)
+      console.log('🔍 reservationsService:', reservationsService)
+      
+      // Test individual de cada servicio
+      console.log('📋 Probando roomsService.getRooms()...')
+      try {
+        const testRooms = await roomsService.getRooms()
+        console.log('📋 Test Rooms Result:', testRooms)
+      } catch (testError) {
+        console.error('❌ Test Rooms Error:', testError)
+      }
+      
+      console.log('📅 Probando reservationsService.getReservations()...')
+      try {
+        const testReservations = await reservationsService.getReservations()
+        console.log('📅 Test Reservations Result:', testReservations)
+      } catch (testError) {
+        console.error('❌ Test Reservations Error:', testError)
+      }
+
       // Cargar salas y reservas en paralelo
       const [roomsData, reservationsData] = await Promise.all([
         roomsService.getRooms(),
         reservationsService.getReservations()
       ])
+
+      console.log('🏢 Salas cargadas:', roomsData.length)
+      console.log('📅 Reservas cargadas:', reservationsData.length)
+      console.log('📅 Reservas detalle:', reservationsData)
 
       setRooms(roomsData)
       setReservations(reservationsData)
@@ -58,9 +83,11 @@ function Dashboard() {
       // Calcular estadísticas
       calculateStats(roomsData, reservationsData)
 
+      console.log('✅ DATOS ACTUALIZADOS')
+
     } catch (err) {
       setError(err.message)
-      console.error('Error loading data:', err)
+      console.error('❌ Error loading data:', err)
     } finally {
       setLoading(false)
     }
@@ -68,12 +95,35 @@ function Dashboard() {
 
   const calculateStats = (roomsData, reservationsData) => {
     const today = new Date().toISOString().split('T')[0]
+    const now = new Date()
+    const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+    
     const todayReservations = reservationsData.filter(res =>
       res.date === today && res.status !== 'cancelled'
     )
 
+    // 🕐 ESPACIOS DISPONIBLES EN TIEMPO REAL
+    // Contar salas que están ocupadas AHORA MISMO
+    const currentlyOccupied = todayReservations.filter(res => {
+      const startMinutes = timeToMinutes(res.startTime)
+      const endMinutes = timeToMinutes(res.endTime)
+      const nowMinutes = timeToMinutes(currentTime)
+      
+      return nowMinutes >= startMinutes && nowMinutes < endMinutes
+    })
+
+    const occupiedRoomIds = new Set(currentlyOccupied.map(res => res.roomId))
+    const availableSpaces = Math.max(0, roomsData.length - occupiedRoomIds.size)
+
+    console.log('📊 ESTADÍSTICAS EN TIEMPO REAL:')
+    console.log('🏢 Total salas:', roomsData.length)
+    console.log('🕐 Hora actual:', currentTime)
+    console.log('📅 Reservas hoy:', todayReservations.length)
+    console.log('🔴 Ocupadas AHORA:', occupiedRoomIds.size)
+    console.log('✅ Disponibles AHORA:', availableSpaces)
+
     setStats({
-      availableSpaces: roomsData.length - todayReservations.length,
+      availableSpaces: availableSpaces,
       reservedSpaces: todayReservations.length,
       mostReservedTime: getMostReservedTime(todayReservations)
     })
@@ -92,11 +142,47 @@ function Dashboard() {
     ) || '12:00'
   }
 
+  // 🚨 FUNCIÓN DE VALIDACIÓN DE CONFLICTOS
+  const checkTimeConflict = (roomId, date, startTime, endTime, existingReservations) => {
+    console.log('🔍 Verificando conflictos para:', { roomId, date, startTime, endTime })
+    
+    const conflicts = existingReservations.filter(reservation => {
+      // Misma sala y mismo día
+      if (reservation.roomId !== roomId || reservation.date !== date) {
+        return false
+      }
+
+      // Convertir horarios a minutos para comparar
+      const newStart = timeToMinutes(startTime)
+      const newEnd = timeToMinutes(endTime)
+      const existingStart = timeToMinutes(reservation.startTime)
+      const existingEnd = timeToMinutes(reservation.endTime)
+
+      // Verificar solapamiento
+      const hasOverlap = (newStart < existingEnd && newEnd > existingStart)
+      
+      if (hasOverlap) {
+        console.log('❌ CONFLICTO encontrado:', reservation)
+      }
+      
+      return hasOverlap
+    })
+
+    console.log('🔍 Conflictos encontrados:', conflicts.length)
+    return conflicts.length > 0
+  }
+
+  // Función auxiliar para convertir tiempo a minutos
+  const timeToMinutes = (timeStr) => {
+    const [hours, minutes] = timeStr.split(':').map(Number)
+    return hours * 60 + minutes
+  }
+
   const handleCreateReservation = async (e) => {
     e.preventDefault()
 
     // Validar formulario
-    if (!formData.roomId || !formData.date || !formData.startTime || !formData.endTime || !formData.purpose) {
+    if (!formData.roomId || !formData.date || !formData.startTime || !formData.endTime) {
       alert('Por favor completa todos los campos')
       return
     }
@@ -118,13 +204,27 @@ function Dashboard() {
     try {
       setLoading(true)
 
+      // 🚨 VALIDACIÓN DE CONFLICTOS
+      const hasConflict = checkTimeConflict(
+        formData.roomId,
+        formData.date,
+        formData.startTime,
+        formData.endTime,
+        reservations
+      )
+
+      if (hasConflict) {
+        alert('⚠️ CONFLICTO: Ya existe una reserva en esa sala para ese horario')
+        setLoading(false)
+        return
+      }
+
       // Crear la reserva
       const reservationData = {
         roomId: formData.roomId,
         date: formData.date,
         startTime: formData.startTime,
         endTime: formData.endTime,
-        purpose: formData.purpose,
         userName: 'yop' // Esto se obtendrá del contexto de autenticación
       }
 
@@ -137,8 +237,7 @@ function Dashboard() {
         roomId: '',
         date: new Date().toISOString().split('T')[0],
         startTime: '',
-        endTime: '',
-        purpose: ''
+        endTime: ''
       })
 
       // Recargar datos
@@ -376,21 +475,7 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Campo Propósito */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Propósito de la reunión
-              </label>
-              <input
-                type="text"
-                name="purpose"
-                value={formData.purpose}
-                onChange={handleInputChange}
-                placeholder="Ej: Reunión de equipo, Presentación, etc."
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                disabled={loading}
-              />
-            </div>
+
 
             <button
               type="submit"

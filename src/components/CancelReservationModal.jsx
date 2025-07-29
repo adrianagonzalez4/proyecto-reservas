@@ -11,7 +11,7 @@ const CancelReservationModal = ({ isOpen, onClose, reservation, onUpdate }) => {
 
     try {
       // 👇 Aquí debes conectar con tu backend en AWS (por ahora usamos fetch como placeholder)
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/reservations/${reservation.id}`, {
+      const response = await fetch(`https://vcth1ds413.execute-api.us-west-2.amazonaws.com/prod/reservations/${reservation.id}`, {
         method: 'DELETE'
       })
 

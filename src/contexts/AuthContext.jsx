@@ -41,6 +41,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (email, password, name) => {
     try {
+      console.log('📝 Registrando usuario:', email);
       const { user } = await signUp({
         username: email,
         password,
@@ -49,8 +50,22 @@ export const AuthProvider = ({ children }) => {
           name
         }
       });
-      return { success: true, user };
+      console.log('✅ Usuario registrado, necesita confirmación:', user);
+      return { success: true, user, needsConfirmation: true };
     } catch (error) {
+      console.error('❌ Error en registro:', error);
+      return { success: false, message: error.message };
+    }
+  };
+
+  const confirmSignUpCode = async (email, code) => {
+    try {
+      console.log('🔐 Confirmando código para:', email);
+      await confirmSignUp({ username: email, confirmationCode: code });
+      console.log('✅ Cuenta confirmada exitosamente');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error confirmando código:', error);
       return { success: false, message: error.message };
     }
   };
@@ -64,6 +79,7 @@ export const AuthProvider = ({ children }) => {
     user,
     login,
     register,
+    confirmSignUpCode,
     logout,
     isAuthenticated: !!user,
     loading,
