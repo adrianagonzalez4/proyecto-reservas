@@ -322,7 +322,7 @@ const handleCreateReservation = async (e) => {
       <div className="flex-1 p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">¡Bienvenido, yop!</h2>
+          <h2 className="text-2xl font-bold text-gray-900">¡Bienvenido, Adriana!</h2>
           <p className="text-gray-600">{currentDate}</p>
         </div>
 
